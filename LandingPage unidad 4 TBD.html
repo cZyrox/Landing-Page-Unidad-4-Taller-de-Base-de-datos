@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 4: Concurrencia y Transacciones en Bases de Datos</title>
+  
+  <!-- Fonts (Serif Elegantes) & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Lora', 'serif'],
+            serif: ['Lora', 'serif'],
+            display: ['Playfair Display', 'serif'],
+            cinzel: ['Cinzel', 'serif'],
+            mono: ['Fira Code', 'monospace'],
+          },
+          colors: {
+            emerald: {
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+            },
+            violet: {
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              900: '#4c1d95',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+    .glass-nav {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+  </style>
+</head>
+<body class="bg-[#090d16] text-slate-100 font-serif antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-300">
+
+  <!-- NAVBAR STICKY -->
+  <header class="sticky top-0 z-50 glass-nav bg-[#090d16]/85 border-b border-slate-800/80 px-4 lg:px-8 py-4 transition-all duration-300">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <a href="#hero" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-violet-600 flex items-center justify-center text-white font-cinzel font-bold text-lg shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+          IV
+        </div>
+        <div>
+          <span class="font-display font-bold text-base md:text-lg text-white block leading-tight tracking-tight">Tema 4: Concurrencia</span>
+          <span class="text-xs text-emerald-400 font-serif italic tracking-wide">Taller de Base de Datos</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav Menu -->
+      <nav class="hidden md:flex items-center gap-6 text-xs font-cinzel font-bold uppercase tracking-widest text-slate-300">
+        <a href="#conceptos" class="hover:text-emerald-400 transition-colors">4.1 Conceptos</a>
+        <a href="#acid" class="hover:text-emerald-400 transition-colors">4.2 ACID</a>
+        <a href="#consistencia" class="hover:text-emerald-400 transition-colors">4.3 Consistencia</a>
+        <a href="#aislamiento" class="hover:text-emerald-400 transition-colors">4.4 Aislamiento</a>
+        <a href="#commit-rollback" class="hover:text-emerald-400 transition-colors">4.5 Commit & Rollback</a>
+        <a href="#referencias" class="hover:text-emerald-400 transition-colors">Referencias</a>
+      </nav>
+
+      <!-- Interactive Controls -->
+      <div class="flex items-center gap-3">
+        <a href="#simulador" class="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-cinzel font-bold text-xs uppercase tracking-widest shadow-md shadow-emerald-500/20 hover:scale-105 transition-all">
+          <i class="fa-solid fa-play text-xs"></i> Simulador
+        </a>
+        
+        <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-300 hover:text-white text-xl">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown Menu -->
+    <div id="mobile-menu" class="hidden md:hidden pt-4 pb-2 px-2 flex-col gap-3 border-t border-slate-800 mt-3 font-cinzel font-bold text-xs uppercase tracking-wider">
+      <a href="#conceptos" class="py-2 text-slate-300 hover:text-emerald-400">4.1 Conceptos</a>
+      <a href="#acid" class="py-2 text-slate-300 hover:text-emerald-400">4.2 ACID</a>
+      <a href="#consistencia" class="py-2 text-slate-300 hover:text-emerald-400">4.3 Consistencia</a>
+      <a href="#aislamiento" class="py-2 text-slate-300 hover:text-emerald-400">4.4 Aislamiento</a>
+      <a href="#commit-rollback" class="py-2 text-slate-300 hover:text-emerald-400">4.5 Commit & Rollback</a>
+      <a href="#referencias" class="py-2 text-slate-300 hover:text-emerald-400">Referencias APA 7</a>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section id="hero" class="relative pt-16 pb-20 md:pt-24 md:pb-32 overflow-hidden">
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),rgba(255,255,255,0))]"></div>
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 relative z-10 text-center">
+      
+      <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-cinzel text-xs font-bold uppercase tracking-widest mb-8">
+        <i class="fa-solid fa-layer-group"></i> Unidad IV — Control de Concurrencia
+      </div>
+
+      <h1 class="text-3xl sm:text-5xl md:text-6xl font-display font-black text-white tracking-tight leading-tight max-w-5xl mx-auto mb-8">
+        Gestión de Concurrencia & Transacciones en <span class="italic font-serif bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-violet-400">Bases de Datos</span>
+      </h1>
+
+      <p class="text-base md:text-xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed font-serif italic">
+        Un compendio interactivo sobre cómo los motores de bases de datos modernos procesan transacciones simultáneas preservando la integridad y consistencia de los datos.
+      </p>
+
+      <div class="flex flex-wrap justify-center gap-4">
+        <a href="#conceptos" class="px-8 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-cinzel font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all">
+          Explorar Subtemas
+        </a>
+        <a href="#simulador" class="px-8 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 font-cinzel font-bold text-xs uppercase tracking-widest hover:-translate-y-0.5 transition-all">
+          Probar Simulador <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+        </a>
+      </div>
+
+      <!-- Quick Stats / Highlights -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-16 pt-12 border-t border-slate-800/80">
+        <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+          <div class="text-3xl font-display font-bold text-emerald-400">4</div>
+          <div class="text-xs text-slate-400 font-cinzel font-bold mt-2 uppercase tracking-wider">Propiedades ACID</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+          <div class="text-3xl font-display font-bold text-teal-400">3</div>
+          <div class="text-xs text-slate-400 font-cinzel font-bold mt-2 uppercase tracking-wider">Anomalías Comunes</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+          <div class="text-3xl font-display font-bold text-violet-400">4</div>
+          <div class="text-xs text-slate-400 font-cinzel font-bold mt-2 uppercase tracking-wider">Niveles Aislamiento</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+          <div class="text-3xl font-display font-bold text-emerald-400">2</div>
+          <div class="text-xs text-slate-400 font-cinzel font-bold mt-2 uppercase tracking-wider">Comandos Control</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4.1 CONCEPTOS -->
+  <section id="conceptos" class="py-20 bg-[#090d16] border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        <div>
+          <span class="text-emerald-400 font-cinzel font-bold uppercase tracking-widest text-xs">Subtema 4.1</span>
+          <h2 class="text-2xl md:text-4xl font-display font-bold text-white mt-2">Conceptos Fundamentales</h2>
+        </div>
+        <p class="text-slate-400 max-w-md mt-4 md:mt-0 text-sm font-serif italic">
+          Principios del control de ejecución paralela y los conflictos que emergen por accesos concurrentes.
+        </p>
+      </div>
+
+      <!-- General Concept Cards -->
+      <div class="grid md:grid-cols-3 gap-6 mb-16">
+        <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-emerald-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-users-gear"></i>
+          </div>
+          <h3 class="text-lg font-display font-bold text-white mb-2">Concurrencia</h3>
+          <p class="text-sm text-slate-300 leading-relaxed font-serif">
+            Capacidad del Sistema Gestor de Base de Datos para procesar múltiples transacciones en paralelo compartiendo recursos sin interferencias.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-violet-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <h3 class="text-lg font-display font-bold text-white mb-2">Transacción</h3>
+          <p class="text-sm text-slate-300 leading-relaxed font-serif">
+            Unidad lógica e indivisible de trabajo que agrupa una o varias sentencias de lectura o modificación en la base de datos.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-teal-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h3 class="text-lg font-display font-bold text-white mb-2">Integridad de Datos</h3>
+          <p class="text-sm text-slate-300 leading-relaxed font-serif">
+            Garantía de que la información almacenada se conserva precisa, completa y exenta de corrupción ante eventos concurrentes.
+          </p>
+        </div>
+      </div>
+
+      <!-- Anomalías de Concurrencia -->
+      <h3 class="text-xl md:text-2xl font-display font-bold text-white mb-8 flex items-center gap-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-400 text-lg"></i>
+        Problemas o Anomalías de Concurrencia
+      </h3>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Lectura Sucia -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-amber-500/50 transition-all">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 font-cinzel text-xs font-bold mb-4">
+              Dirty Read
+            </div>
+            <h4 class="text-lg font-display font-bold text-white mb-2">1. Lectura Sucia</h4>
+            <p class="text-sm text-slate-300 mb-4 leading-relaxed font-serif">
+              Ocurre cuando una transacción consulta registros modificados por otra transacción en curso que **aún no ha ejecutado COMMIT** y que posteriormente efectúa un **ROLLBACK**.
+            </p>
+          </div>
+          <div class="bg-[#050811] p-4 rounded-xl border border-slate-800/80 font-mono text-xs text-slate-300 space-y-1">
+            <div class="text-amber-400">// Ejemplo:</div>
+            <div>T1: UPDATE saldo SET valor = 500</div>
+            <div class="text-emerald-400">T2: SELECT saldo -> Lee 500</div>
+            <div>T1: ROLLBACK! (Cancela cambios)</div>
+            <div class="text-rose-400">T2 operó con un valor inexistente en disco.</div>
+          </div>
+        </div>
+
+        <!-- Lectura No Repetible -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-violet-500/50 transition-all">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 font-cinzel text-xs font-bold mb-4">
+              Non-Repeatable Read
+            </div>
+            <h4 class="text-lg font-display font-bold text-white mb-2">2. Lectura No Repetible</h4>
+            <p class="text-sm text-slate-300 mb-4 leading-relaxed font-serif">
+              Sucede cuando una misma transacción realiza dos lecturas idénticas de un registro y obtiene datos distintos porque otra transacción **modificó o eliminó** dicho registro y confirmó los cambios.
+            </p>
+          </div>
+          <div class="bg-[#050811] p-4 rounded-xl border border-slate-800/80 font-mono text-xs text-slate-300 space-y-1">
+            <div class="text-violet-400">// Ejemplo:</div>
+            <div class="text-emerald-400">T1: SELECT precio -> $100</div>
+            <div>T2: UPDATE precio = $150 (COMMIT)</div>
+            <div class="text-emerald-400">T1: SELECT precio -> $150</div>
+            <div class="text-rose-400">T1 obtiene dos estados distintos para el mismo registro.</div>
+          </div>
+        </div>
+
+        <!-- Lectura Fantasma -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-teal-500/50 transition-all">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 text-teal-400 font-cinzel text-xs font-bold mb-4">
+              Phantom Read
+            </div>
+            <h4 class="text-lg font-display font-bold text-white mb-2">3. Lectura Fantasma</h4>
+            <p class="text-sm text-slate-300 mb-4 leading-relaxed font-serif">
+              Ocurre cuando una consulta por rango de criterios arroja un número distinto de filas al repetirse, debido a que otra transacción **insertó o eliminó registros** y ejecutó COMMIT.
+            </p>
+          </div>
+          <div class="bg-[#050811] p-4 rounded-xl border border-slate-800/80 font-mono text-xs text-slate-300 space-y-1">
+            <div class="text-teal-400">// Ejemplo:</div>
+            <div class="text-emerald-400">T1: SELECT WHERE sueldo > 3000 -> (10 filas)</div>
+            <div>T2: INSERT nuevo empleado sueldo=4000 (COMMIT)</div>
+            <div class="text-emerald-400">T1: Repite SELECT -> (11 filas!)</div>
+            <div class="text-rose-400">Aparecen nuevas filas en el conjunto de resultados.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4.2 PROPIEDADES ACID -->
+  <section id="acid" class="py-20 bg-[#050811] border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-emerald-400 font-cinzel font-bold uppercase tracking-widest text-xs">Subtema 4.2</span>
+        <h2 class="text-2xl md:text-4xl font-display font-bold text-white mt-2">Propiedades de las Transacciones (ACID)</h2>
+        <p class="text-slate-400 mt-4 text-sm md:text-base font-serif italic">
+          Los cuatro pilares esenciales que garantizan la máxima confiabilidad en el procesamiento de transacciones.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- A - Atomicidad -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden group hover:border-emerald-500 transition-all">
+          <div class="absolute -right-2 -bottom-2 text-8xl font-display font-black text-slate-800/20 group-hover:text-emerald-500/10 transition-colors">A</div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl font-bold mb-6">
+            <i class="fa-solid fa-atom"></i>
+          </div>
+          <h3 class="text-xl font-display font-bold text-white mb-1">Atomicidad</h3>
+          <div class="text-xs text-emerald-400 font-cinzel font-bold uppercase tracking-wider mb-3">«Todo o Nada»</div>
+          <p class="text-sm text-slate-300 leading-relaxed font-serif relative z-10">
+            La transacción debe completarse íntegramente o revertirse en su totalidad. Ante cualquier fallo, se ejecuta un ROLLBACK automático.
+          </p>
+        </div>
+
+        <!-- C - Consistencia -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden group hover:border-teal-500 transition-all">
+          <div class="absolute -right-2 -bottom-2 text-8xl font-display font-black text-slate-800/20 group-hover:text-teal-500/10 transition-colors">C</div>
+          <div class="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center text-xl font-bold mb-6">
+            <i class="fa-solid fa-check-double"></i>
+          </div>
+          <h3 class="text-xl font-display font-bold text-white mb-1">Consistencia</h3>
+          <div class="text-xs text-teal-400 font-cinzel font-bold uppercase tracking-wider mb-3">«Estado Válido»</div>
+          <p class="text-sm text-slate-300 leading-relaxed font-serif relative z-10">
+            Asegura que la base de datos pase de un estado consistente previo a otro estado válido posterior, respetando todas las reglas de integridad.
+          </p>
+        </div>
+
+        <!-- I - Aislamiento -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden group hover:border-violet-500 transition-all">
+          <div class="absolute -right-2 -bottom-2 text-8xl font-display font-black text-slate-800/20 group-hover:text-violet-500/10 transition-colors">I</div>
+          <div class="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center text-xl font-bold mb-6">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <h3 class="text-xl font-display font-bold text-white mb-1">Aislamiento</h3>
+          <div class="text-xs text-violet-400 font-cinzel font-bold uppercase tracking-wider mb-3">«Independencia»</div>
+          <p class="text-sm text-slate-300 leading-relaxed font-serif relative z-10">
+            Mantiene invisibles las operaciones parciales de una transacción activa para otras consultas hasta que se concrete su confirmación.
+          </p>
+        </div>
+
+        <!-- D - Durabilidad -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden group hover:border-emerald-500 transition-all">
+          <div class="absolute -right-2 -bottom-2 text-8xl font-display font-black text-slate-800/20 group-hover:text-emerald-500/10 transition-colors">D</div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl font-bold mb-6">
+            <i class="fa-solid fa-hard-drive"></i>
+          </div>
+          <h3 class="text-xl font-display font-bold text-white mb-1">Durabilidad</h3>
+          <div class="text-xs text-emerald-400 font-cinzel font-bold uppercase tracking-wider mb-3">«Persistencia»</div>
+          <p class="text-sm text-slate-300 leading-relaxed font-serif relative z-10">
+            Garantiza que los cambios confirmados mediante COMMIT permanezcan inalterables de forma definitiva, incluso tras caídas del sistema.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4.3 GRADOS DE CONSISTENCIA -->
+  <section id="consistencia" class="py-20 bg-[#090d16] border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        <div>
+          <span class="text-emerald-400 font-cinzel font-bold uppercase tracking-widest text-xs">Subtema 4.3</span>
+          <h2 class="text-2xl md:text-4xl font-display font-bold text-white mt-2">Grados de Consistencia</h2>
+        </div>
+        <p class="text-slate-400 max-w-md mt-4 md:mt-0 text-sm font-serif italic">
+          Niveles de restricción aplicados sobre los candados (*locks*) para evitar la corrupción de datos.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Grado 0 -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900 transition-all">
+          <div class="text-xs font-cinzel font-bold text-rose-400 uppercase tracking-widest mb-2">Grado 0</div>
+          <h3 class="text-base font-display font-bold text-white mb-2">Sin Bloqueos</h3>
+          <p class="text-xs text-slate-300 leading-relaxed font-serif mb-4">
+            Permite sobrescribir datos modificados por transacciones activas. No se mantienen bloqueos de escritura prolongados.
+          </p>
+          <div class="text-xs text-rose-400 font-serif font-semibold bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+            <i class="fa-solid fa-xmark mr-1"></i> Permite Lost Update
+          </div>
+        </div>
+
+        <!-- Grado 1 -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900 transition-all">
+          <div class="text-xs font-cinzel font-bold text-amber-400 uppercase tracking-widest mb-2">Grado 1</div>
+          <h3 class="text-base font-display font-bold text-white mb-2">Previene Lost Update</h3>
+          <p class="text-xs text-slate-300 leading-relaxed font-serif mb-4">
+            Mantiene bloqueos exclusivos de escritura hasta el término de la transacción (`COMMIT`/`ROLLBACK`).
+          </p>
+          <div class="text-xs text-amber-400 font-serif font-semibold bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+            <i class="fa-solid fa-check mr-1"></i> Evita sobrescrituras
+          </div>
+        </div>
+
+        <!-- Grado 2 -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900 transition-all">
+          <div class="text-xs font-cinzel font-bold text-teal-400 uppercase tracking-widest mb-2">Grado 2</div>
+          <h3 class="text-base font-display font-bold text-white mb-2">Previene Lectura Sucia</h3>
+          <p class="text-xs text-slate-300 leading-relaxed font-serif mb-4">
+            Añade bloqueos de lectura mientras se consultan los registros, impidiendo leer datos no confirmados.
+          </p>
+          <div class="text-xs text-teal-400 font-serif font-semibold bg-teal-500/10 p-2 rounded-lg border border-teal-500/20">
+            <i class="fa-solid fa-check mr-1"></i> Sin Dirty Reads
+          </div>
+        </div>
+
+        <!-- Grado 3 -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900 transition-all">
+          <div class="text-xs font-cinzel font-bold text-emerald-400 uppercase tracking-widest mb-2">Grado 3</div>
+          <h3 class="text-base font-display font-bold text-white mb-2">Consistencia Total</h3>
+          <p class="text-xs text-slate-300 leading-relaxed font-serif mb-4">
+            Mantiene todos los bloqueos de lectura y escritura hasta finalizar formalmente la transacción.
+          </p>
+          <div class="text-xs text-emerald-400 font-serif font-semibold bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+            <i class="fa-solid fa-shield mr-1"></i> Máximo Aislamiento
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4.4 NIVELES DE AISLAMIENTO -->
+  <section id="aislamiento" class="py-20 bg-[#050811] border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-emerald-400 font-cinzel font-bold uppercase tracking-widest text-xs">Subtema 4.4</span>
+        <h2 class="text-2xl md:text-4xl font-display font-bold text-white mt-2">Niveles de Aislamiento SQL</h2>
+        <p class="text-slate-400 mt-4 text-sm md:text-base font-serif italic">
+          Estándar SQL para graduar la tolerancia a anomalías de concurrencia frente al rendimiento general.
+        </p>
+      </div>
+
+      <!-- TABLA COMPARATIVA -->
+      <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/90 shadow-2xl mb-12">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 bg-slate-800/50 font-cinzel text-xs font-bold uppercase tracking-widest text-slate-300">
+              <th class="p-4 md:p-6">Nivel de Aislamiento</th>
+              <th class="p-4 md:p-6 text-center">Lectura Sucia</th>
+              <th class="p-4 md:p-6 text-center">Lectura No Repetible</th>
+              <th class="p-4 md:p-6 text-center">Lectura Fantasma</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800 text-sm font-serif">
+            
+            <tr class="hover:bg-slate-800/30 transition-colors">
+              <td class="p-4 md:p-6 font-bold text-slate-200 font-display">
+                Read Uncommitted
+                <span class="block text-xs font-normal text-slate-400 mt-0.5 font-serif italic">Máxima velocidad / Mínima protección</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Permitida</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Permitida</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Permitida</span>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-slate-800/30 transition-colors">
+              <td class="p-4 md:p-6 font-bold text-slate-200 font-display">
+                Read Committed
+                <span class="block text-xs font-normal text-emerald-400 mt-0.5 font-serif italic">Predeterminado en PostgreSQL, Oracle, SQL Server</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Evitada</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Permitida</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Permitida</span>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-slate-800/30 transition-colors">
+              <td class="p-4 md:p-6 font-bold text-slate-200 font-display">
+                Repeatable Read
+                <span class="block text-xs font-normal text-emerald-400 mt-0.5 font-serif italic">Predeterminado en MySQL (InnoDB)</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Evitada</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Evitada</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Permitida</span>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-slate-800/30 transition-colors">
+              <td class="p-4 md:p-6 font-bold text-slate-200 font-display">
+                Serializable
+                <span class="block text-xs font-normal text-slate-400 mt-0.5 font-serif italic">Aislamiento estricto secuencial</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Evitada</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Evitada</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-full text-xs font-cinzel font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Evitada</span>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4.5 COMMIT Y ROLLBACK + SIMULADOR -->
+  <section id="commit-rollback" class="py-20 bg-[#090d16] border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        <div>
+          <span class="text-emerald-400 font-cinzel font-bold uppercase tracking-widest text-xs">Subtema 4.5</span>
+          <h2 class="text-2xl md:text-4xl font-display font-bold text-white mt-2">Control de Transacciones: Commit & Rollback</h2>
+        </div>
+        <p class="text-slate-400 max-w-md mt-4 md:mt-0 text-sm font-serif italic">
+          Comandos de control que definen la conclusión exitosa o la cancelación de una transacción.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 mb-16">
+        <!-- COMMIT Card -->
+        <div class="p-6 rounded-2xl bg-slate-900/60 border border-emerald-500/30 relative overflow-hidden">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl font-bold mb-4">
+            <i class="fa-solid fa-check"></i>
+          </div>
+          <h3 class="text-xl font-display font-bold text-white mb-2">COMMIT WORK</h3>
+          <p class="text-sm text-slate-300 mb-4 leading-relaxed font-serif">
+            Consolida y guarda de forma **definitiva** en disco todas las operaciones ejecutadas durante la transacción, liberando los candados adquiridos.
+          </p>
+        </div>
+
+        <!-- ROLLBACK Card -->
+        <div class="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/30 relative overflow-hidden">
+          <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-xl font-bold mb-4">
+            <i class="fa-solid fa-arrow-rotate-left"></i>
+          </div>
+          <h3 class="text-xl font-display font-bold text-white mb-2">ROLLBACK WORK</h3>
+          <p class="text-sm text-slate-300 mb-4 leading-relaxed font-serif">
+            Aborta la transacción activa y **deshace la totalidad** de sus modificaciones, restituyendo la base de datos a su estado original.
+          </p>
+        </div>
+      </div>
+
+      <!-- SIMULADOR INTERACTIVO BANCARIO -->
+      <div id="simulador" class="bg-[#050811] border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-6 mb-8 flex-wrap gap-4">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-cinzel text-xs font-bold mb-2">
+              <i class="fa-solid fa-laptop-code"></i> Práctica Interactiva
+            </div>
+            <h3 class="text-xl md:text-2xl font-display font-bold text-white">Simulador de Transacción Bancaria</h3>
+          </div>
+          <button id="reset-sim-btn" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-cinzel font-bold text-slate-300 border border-slate-800 transition-all">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Reiniciar
+          </button>
+        </div>
+
+        <!-- State Boxes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          
+          <!-- Cuenta A -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-slate-400 font-serif text-sm">Cuenta Origen (Ana)</span>
+              <span id="account-a-badge" class="px-2 py-0.5 rounded text-xs font-mono bg-slate-800 text-slate-400">Normal</span>
+            </div>
+            <div class="text-3xl font-display font-bold text-white mb-1" id="account-a-bal">$1,000 MXN</div>
+            <div class="text-xs text-slate-500 font-serif italic">Estado inicial: $1,000</div>
+          </div>
+
+          <!-- Cuenta B -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-slate-400 font-serif text-sm">Cuenta Destino (Carlos)</span>
+              <span id="account-b-badge" class="px-2 py-0.5 rounded text-xs font-mono bg-slate-800 text-slate-400">Normal</span>
+            </div>
+            <div class="text-3xl font-display font-bold text-white mb-1" id="account-b-bal">$500 MXN</div>
+            <div class="text-xs text-slate-500 font-serif italic">Estado inicial: $500</div>
+          </div>
+
+        </div>
+
+        <!-- Transfer Controls -->
+        <div class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 mb-8">
+          <label class="block text-xs font-cinzel font-bold uppercase tracking-wider text-slate-400 mb-3">
+            Monto a Transferir
+          </label>
+          <div class="flex gap-4 max-w-xs mb-6">
+            <input type="number" id="transfer-amount" value="300" class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white font-mono text-sm w-full focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div class="flex flex-wrap gap-3 font-cinzel text-xs font-bold uppercase tracking-widest">
+            <button id="step-1-btn" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition-all">
+              1. Descontar a Ana
+            </button>
+            <button id="step-2-btn" disabled class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              2. Sumar a Carlos
+            </button>
+            <button id="commit-btn" disabled class="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              <i class="fa-solid fa-check mr-1"></i> COMMIT (Confirmar)
+            </button>
+            <button id="rollback-btn" disabled class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              <i class="fa-solid fa-xmark mr-1"></i> ROLLBACK (Deshacer)
+            </button>
+          </div>
+        </div>
+
+        <!-- Logs Terminal -->
+        <div class="bg-[#02040a] border border-slate-800 rounded-2xl p-4 font-mono text-xs text-slate-300">
+          <div class="text-slate-500 border-b border-slate-800/80 pb-2 mb-3 flex items-center justify-between font-cinzel font-bold">
+            <span>LOGS DE LA BASE DE DATOS</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          </div>
+          <div id="sim-logs" class="space-y-1 max-h-40 overflow-y-auto">
+            <div class="text-slate-500">> Transacción iniciada en estado IDLE...</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- REFERENCIAS EN APA 7 (NUEVAS REFERENCIAS BIBTEX) -->
+  <section id="referencias" class="py-20 bg-[#050811] border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8">
+      
+      <div class="max-w-3xl mb-12">
+        <span class="text-emerald-400 font-cinzel font-bold uppercase tracking-widest text-xs">Bibliografía</span>
+        <h2 class="text-2xl md:text-3xl font-display font-bold text-white mt-2">Referencias Formato APA (7.ª ed.)</h2>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6 font-serif">
+        
+        <div class="pl-8 -indent-8 text-sm text-slate-300 leading-relaxed border-b border-slate-800/80 pb-4">
+          Cárdenas, V. H. (2026, abril). <em>¿Qué son los Niveles de Aislamiento en una base de datos?</em> LinkedIn. <a href="https://es.linkedin.com/pulse/qu%C3%A9-son-los-niveles-de-aislamiento-en-una-base-datos-cardenas-hy60e" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline break-all">https://es.linkedin.com/pulse/qu%C3%A9-son-los-niveles-de-aislamiento-en-una-base-datos-cardenas-hy60e</a>
+        </div>
+
+        <div class="pl-8 -indent-8 text-sm text-slate-300 leading-relaxed border-b border-slate-800/80 pb-4">
+          De Databricks, P. (2026, abril). <em>Control de concurrencia en DBMS: cómo el bloqueo, MVCC y las estrategias optimistas mantienen la coherencia de los datos</em>. Databricks. <a href="https://www.databricks.com/es/blog/concurrency-control" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline break-all">https://www.databricks.com/es/blog/concurrency-control</a>
+        </div>
+
+        <div class="pl-8 -indent-8 text-sm text-slate-300 leading-relaxed border-b border-slate-800/80 pb-4">
+          IBM. (2021, febrero). <em>Propiedades de transacciones</em>. Documentación de IBM. <a href="https://www.ibm.com/docs/es/iis/11.5.0?topic=transactions-transaction-properties" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline break-all">https://www.ibm.com/docs/es/iis/11.5.0?topic=transactions-transaction-properties</a>
+        </div>
+
+        <div class="pl-8 -indent-8 text-sm text-slate-300 leading-relaxed">
+          Midudev. (s. f.). <em>Transacciones: BEGIN, COMMIT y ROLLBACK | Aprende SQL</em>. Aprende SQL. <a href="https://www.aprendesql.dev/transacciones" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline break-all">https://www.aprendesql.dev/transacciones</a>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-8 bg-[#090d16] border-t border-slate-800/80 text-center text-xs text-slate-500 font-serif">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>© 2026 — Taller de Base de Datos.</p>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT LÓGICA INTERACTIVA -->
+  <script>
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+      mobileMenu.classList.toggle('flex');
+    });
+
+    // SIMULADOR TRANSACTION LOGIC
+    let initBalA = 1000;
+    let initBalB = 500;
+    let currentBalA = initBalA;
+    let currentBalB = initBalB;
+    let step = 0;
+
+    const elBalA = document.getElementById('account-a-bal');
+    const elBalB = document.getElementById('account-b-bal');
+    const badgeA = document.getElementById('account-a-badge');
+    const badgeB = document.getElementById('account-b-badge');
+    const inputAmount = document.getElementById('transfer-amount');
+    const logs = document.getElementById('sim-logs');
+
+    const btn1 = document.getElementById('step-1-btn');
+    const btn2 = document.getElementById('step-2-btn');
+    const btnCommit = document.getElementById('commit-btn');
+    const btnRollback = document.getElementById('rollback-btn');
+    const btnReset = document.getElementById('reset-sim-btn');
+
+    function logMessage(msg, colorClass = 'text-slate-300') {
+      const div = document.createElement('div');
+      div.className = colorClass;
+      div.innerHTML = `> ${msg}`;
+      logs.appendChild(div);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function updateUI() {
+      elBalA.textContent = `$${currentBalA.toLocaleString()} MXN`;
+      elBalB.textContent = `$${currentBalB.toLocaleString()} MXN`;
+    }
+
+    btn1.addEventListener('click', () => {
+      const amt = parseInt(inputAmount.value) || 300;
+      currentBalA -= amt;
+      step = 1;
+      updateUI();
+      
+      badgeA.textContent = "Modificado (Memoria Temp)";
+      badgeA.className = "px-2 py-0.5 rounded text-xs font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30";
+      
+      logMessage(`BEGIN TRANSACTION;`, 'text-emerald-400');
+      logMessage(`UPDATE cuenta SET saldo = saldo - ${amt} WHERE usuario = 'Ana';`, 'text-amber-300');
+      
+      btn1.disabled = true;
+      btn2.disabled = false;
+      btnRollback.disabled = false;
+    });
+
+    btn2.addEventListener('click', () => {
+      const amt = parseInt(inputAmount.value) || 300;
+      currentBalB += amt;
+      step = 2;
+      updateUI();
+
+      badgeB.textContent = "Modificado (Memoria Temp)";
+      badgeB.className = "px-2 py-0.5 rounded text-xs font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30";
+
+      logMessage(`UPDATE cuenta SET saldo = saldo + ${amt} WHERE usuario = 'Carlos';`, 'text-amber-300');
+
+      btn2.disabled = true;
+      btnCommit.disabled = false;
+    });
+
+    btnCommit.addEventListener('click', () => {
+      badgeA.textContent = "Confirmado (Disk)";
+      badgeA.className = "px-2 py-0.5 rounded text-xs font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+      
+      badgeB.textContent = "Confirmado (Disk)";
+      badgeB.className = "px-2 py-0.5 rounded text-xs font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+
+      logMessage(`COMMIT; // ¡Transacción exitosa y permanente!`, 'text-emerald-400 font-bold');
+
+      btnCommit.disabled = true;
+      btnRollback.disabled = true;
+    });
+
+    btnRollback.addEventListener('click', () => {
+      currentBalA = initBalA;
+      currentBalB = initBalB;
+      updateUI();
+
+      badgeA.textContent = "Restaurado";
+      badgeA.className = "px-2 py-0.5 rounded text-xs font-mono bg-rose-500/20 text-rose-400 border border-rose-500/30";
+
+      badgeB.textContent = "Restaurado";
+      badgeB.className = "px-2 py-0.5 rounded text-xs font-mono bg-rose-500/20 text-rose-400 border border-rose-500/30";
+
+      logMessage(`ROLLBACK; // ¡Se deshicieron todos los cambios no confirmados!`, 'text-rose-400 font-bold');
+
+      btn1.disabled = false;
+      btn2.disabled = true;
+      btnCommit.disabled = true;
+      btnRollback.disabled = true;
+    });
+
+    btnReset.addEventListener('click', () => {
+      currentBalA = initBalA;
+      currentBalB = initBalB;
+      step = 0;
+      updateUI();
+
+      badgeA.textContent = "Normal";
+      badgeA.className = "px-2 py-0.5 rounded text-xs font-mono bg-slate-800 text-slate-400";
+
+      badgeB.textContent = "Normal";
+      badgeB.className = "px-2 py-0.5 rounded text-xs font-mono bg-slate-800 text-slate-400";
+
+      logs.innerHTML = '<div class="text-slate-500">> Transacción reiniciada...</div>';
+
+      btn1.disabled = false;
+      btn2.disabled = true;
+      btnCommit.disabled = true;
+      btnRollback.disabled = true;
+    });
+  </script>
+</body>
+</html>
